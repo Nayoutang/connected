@@ -15,11 +15,10 @@ func _initialize() -> void:
 		out = a[0]
 	main = load("res://main.tscn").instantiate()
 	root.add_child(main)
-	for i in 10:
-		plan.append(["pre", i, 20])
+	plan.append(["menu", 0, 60])
+	for i in [0, 2, 3, 4, 5, 8, 9]:
+		plan.append(["pre", i, 40])
 		plan.append(["win", i, 220])
-	plan.append(["reveal", 2, 330])
-	plan.append(["reveal", 5, 330])
 	plan.append(["reveal", 9, 480])
 	plan.append(["garden", 9, 700])
 

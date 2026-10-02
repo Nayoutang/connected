@@ -7,6 +7,7 @@ const WaterSim = preload("res://scripts/sim.gd")
 const CELL := 90.0
 const TICK := 0.35
 const VIEW_W := 1280.0
+const DESIGN_SIZE := Vector2i(1280, 720)
 
 const C_BG := Color(0.07, 0.08, 0.11)
 const C_GUIDE := Color(1, 1, 1, 0.05)
@@ -30,6 +31,8 @@ const MASK_COLORS := {
 	6: Color(0.30, 0.78, 0.38), 7: Color(0.55, 0.40, 0.32),
 }
 const ROUND_NAMES := {"grass": "一丛草", "flower": "一丛花", "tree": "一棵树"}
+
+var art = preload("res://scripts/game_art.gd").new()
 
 var font: Font
 var levels: Array = []
@@ -66,15 +69,31 @@ var btn_start: Button
 var btn_reset: Button
 var btn_next: Button
 var btn_prev: Button
+var navigation: Control
+var ui_paused := false
 
 
 func _ready() -> void:
+	_configure_display()
 	var sf := SystemFont.new()
 	sf.font_names = PackedStringArray(["Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "WenQuanYi Micro Hei", "Source Han Sans SC", "sans-serif"])
 	font = sf
 	levels = Chapter1.get_levels()
 	_build_ui()
 	_load_level(0)
+	navigation = preload("res://scripts/game_ui.gd").new()
+	get_child(0).add_child(navigation)
+	navigation.setup(self, font)
+
+
+func _configure_display() -> void:
+	# 绘制和输入都用设计分辨率坐标，窗口 / 网页画布缩放时 Godot 会连同所有 CanvasLayer 一起缩放。
+	var window := get_window()
+	window.unresizable = false
+	window.content_scale_size = DESIGN_SIZE
+	window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
+	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_IGNORE
+	window.content_scale_stretch = Window.CONTENT_SCALE_STRETCH_FRACTIONAL
 
 
 # ───────────────────────── UI ─────────────────────────
@@ -112,19 +131,19 @@ func _build_ui() -> void:
 	root.add_child(lbl_status)
 
 	lbl_msg = Label.new()
-	lbl_msg.position = Vector2(28, 626)
+	lbl_msg.position = Vector2(28, 630)
 	lbl_msg.custom_minimum_size = Vector2(1224, 0)
 	lbl_msg.add_theme_font_size_override("font_size", 22)
 	lbl_msg.add_theme_color_override("font_color", C_GOLD)
 	root.add_child(lbl_msg)
 
-	btn_prev = _make_button(root, "上一关", Vector2(720, 656))
+	btn_prev = _make_button(root, "上一关", Vector2(720, 664))
 	btn_prev.pressed.connect(_on_prev)
-	btn_start = _make_button(root, "放水", Vector2(850, 656))
+	btn_start = _make_button(root, "放水", Vector2(850, 664))
 	btn_start.pressed.connect(_on_start)
-	btn_reset = _make_button(root, "重置", Vector2(980, 656))
+	btn_reset = _make_button(root, "重置", Vector2(980, 664))
 	btn_reset.pressed.connect(_on_reset)
-	btn_next = _make_button(root, "下一关", Vector2(1110, 656))
+	btn_next = _make_button(root, "下一关", Vector2(1110, 664))
 	btn_next.pressed.connect(_on_next)
 
 
@@ -140,6 +159,8 @@ func _make_button(parent: Node, text: String, pos: Vector2) -> Button:
 
 
 func _on_start() -> void:
+	if ui_paused:
+		navigation.hide_screen()
 	if running:
 		return
 	running = true
@@ -186,7 +207,7 @@ func _load_level(i: int) -> void:
 	var max_col := 0
 	for c in sim.node_col:
 		max_col = maxi(max_col, c)
-	origin = Vector2((VIEW_W - max_col * CELL) / 2.0, 150.0)
+	origin = Vector2((VIEW_W - max_col * CELL) / 2.0, 124.0)
 	running = false
 	acc = 0.0
 	frac = 0.0
@@ -206,6 +227,8 @@ func _load_level(i: int) -> void:
 	btn_prev.disabled = (i == 0)
 	_update_status()
 	queue_redraw()
+	if navigation != null:
+		navigation.reveal_level()
 
 
 func _set_play_ui(on: bool) -> void:
@@ -229,6 +252,8 @@ func _update_status() -> void:
 
 
 func _process(delta: float) -> void:
+	if ui_paused:
+		return
 	if mode != "play":
 		_process_reveal(delta)
 		return
@@ -280,7 +305,7 @@ func _update_hover() -> void:
 	hover_id = -1
 	var m := get_local_mouse_position()
 	for e in sim.edge_a.size():
-		if sim.edge_kind[e] == "valve" and not sim.edge_open[e] and _emid(e).distance_to(m) < 26.0:
+		if sim.edge_kind[e] == "valve" and not sim.edge_open[e] and _emid(e).distance_to(m) < 33.0:
 			hover_kind = "valve"
 			hover_id = e
 			return
@@ -298,6 +323,8 @@ func _update_hover() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if ui_paused:
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		# 调试/试玩用的快捷键：[ ] 切关，V 看本轮揭晓，G 看花园
 		if event.keycode == KEY_BRACKETRIGHT and lv_index + 1 < levels.size():
@@ -644,36 +671,23 @@ func _draw() -> void:
 				Vector2(x0 + CELL * 0.3, top + CELL * 0.9), Vector2(x0 + CELL * 0.7, top),
 				Vector2(x1 - CELL * 0.7, top), Vector2(x1 - CELL * 0.3, top + CELL * 0.9)]), C_HILL)
 
-	# 管道：外壁 → 内腔 → 水
+	# 管道：开源贴图的管壳 → 彩色的水
 	for e in sim.edge_a.size():
-		var pts := _epath(e)
-		if sim.edge_kind[e] == "siphon" and not sim.edge_open[e]:
-			_draw_dashed_path(pts, Color(C_WALL.r, C_WALL.g, C_WALL.b, 0.55), 14.0)
-			continue
-		draw_polyline(pts, C_WALL, 22.0, true)
-		for k in range(1, pts.size() - 1):
-			draw_circle(pts[k], 11.0, C_WALL)
-	for e in sim.edge_a.size():
-		var pts := _epath(e)
-		if sim.edge_kind[e] == "siphon" and not sim.edge_open[e]:
-			continue
-		draw_polyline(pts, C_BORE, 14.0, true)
-		for k in range(1, pts.size() - 1):
-			draw_circle(pts[k], 7.0, C_BORE)
+		art.edge(self, e)
 	for e in sim.edge_a.size():
 		var f: int = sim.edge_from[e]
 		if f >= 0:
 			var other: int = sim.edge_b[e] if sim.edge_a[e] == f else sim.edge_a[e]
-			_draw_water_path(_flow_path(e, f), _edge_flow(e, f, other), sim.node_mask[f])
+			_draw_water_path(_flow_path(e, f), _edge_flow(e, f, other), sim.node_mask[f], 14.0)
 		elif sim.edge_kind[e] == "valve" and not sim.edge_open[e]:
 			# 关着的阀门：两侧有水就各自灌到阀门处（连通器，水会顶到阀门）
 			var pa := _npos(sim.edge_a[e])
 			var pb := _npos(sim.edge_b[e])
 			var mid := pa.lerp(pb, 0.5)
 			if _node_wet_vis(sim.edge_a[e]):
-				draw_line(pa, mid, _mask_col(sim.node_mask[sim.edge_a[e]]), 10.0, true)
+				draw_line(pa, mid, _mask_col(sim.node_mask[sim.edge_a[e]]), 14.0, true)
 			if _node_wet_vis(sim.edge_b[e]):
-				draw_line(pb, mid, _mask_col(sim.node_mask[sim.edge_b[e]]), 10.0, true)
+				draw_line(pb, mid, _mask_col(sim.node_mask[sim.edge_b[e]]), 14.0, true)
 
 	for i in sim.node_id.size():
 		_draw_node(i)
@@ -695,107 +709,11 @@ func _draw() -> void:
 
 
 func _draw_node(i: int) -> void:
-	var p := _npos(i)
-	var kind: String = sim.node_kind[i]
-	var wet_vis := _node_wet_vis(i)
-	var wc := _mask_col(sim.node_mask[i])
-	match kind:
-		"source":
-			draw_rect(Rect2(p - Vector2(34, 28), Vector2(68, 56)), C_WALL)
-			var inner: Color = wc if sim.started else wc.darkened(0.55)
-			draw_rect(Rect2(p - Vector2(28, 22), Vector2(56, 44)), inner)
-			_txt("水源", p, 20, Color.WHITE)
-		"pipe":
-			draw_circle(p, 13.0, C_WALL)
-			draw_circle(p, 8.0, wc if wet_vis else C_BORE)
-		"goal":
-			_draw_goal(i, p, wet_vis)
-		"slot":
-			_draw_slot(i, p, wet_vis)
-
-
-func _draw_goal(i: int, p: Vector2, wet_vis: bool) -> void:
-	var flora: String = levels[lv_index]["flora"]
-	var want: int = sim.node_want[i]
-	var m: int = sim.node_mask[i]
-	var ok: bool = wet_vis and sim.goal_ok(i)
-	var wrong: bool = wet_vis and not ok
-	var ring: Color = C_WALL
-	if want != 0:
-		ring = _mask_col(want)
-	if ok:
-		var gc: Color = _mask_col(m) if want != 0 else C_GOLD
-		draw_circle(p, 42.0, Color(gc.r, gc.g, gc.b, 0.20))
-		ring = gc
-	elif wrong:
-		ring = C_VALVE_CLOSED
-	draw_circle(p, 29.0, C_BG)
-	draw_arc(p, 29.0, 0.0, TAU, 48, ring, 5.0, true)
-	if wet_vis:
-		var grow: float = clampf((t_now - float(lit_time.get(i, t_now))) * 1.6, 0.0, 1.0)
-		var fc: Color = _mask_col(m) if (flora == "flower") else C_GRASS
-		_draw_flora(flora, p + Vector2(0, 2), 22.0, fc, grow)
-		if wrong:
-			_txt("颜色不对", p + Vector2(0, 46), 16, C_VALVE_CLOSED)
-	else:
-		# 还没浇到水：一个小小的种子
-		draw_circle(p + Vector2(0, 4), 6.0, Color(0.42, 0.34, 0.26))
-		if want != 0:
-			draw_circle(p + Vector2(0, 4), 3.0, _mask_col(want))
-		_txt("终点", p + Vector2(0, 46), 16, C_DIM)
-
-
-func _draw_slot(i: int, p: Vector2, wet_vis: bool) -> void:
-	var rect := Rect2(p - Vector2(26, 30), Vector2(52, 60))
-	if sim.has_tank[i]:
-		var tc := _mask_col(sim.tank_mask)
-		draw_rect(rect, C_WALL)
-		var inner := Rect2(rect.position + Vector2(5, 5), rect.size - Vector2(10, 10))
-		draw_rect(inner, C_BORE)
-		var h := inner.size.y
-		draw_rect(Rect2(inner.position.x, inner.position.y + inner.size.y - h, inner.size.x, h), tc)
-		var top_y: float = inner.position.y + inner.size.y - h
-		var wave := PackedVector2Array()
-		for k in 9:
-			var wx: float = inner.position.x + inner.size.x * float(k) / 8.0
-			wave.append(Vector2(wx, top_y + 1.5 + sin(t_now * 3.0 + float(k) * 0.9) * 1.6))
-		draw_polyline(wave, _mask_light(sim.tank_mask), 2.0, true)
-		_txt("水箱", p + Vector2(0, 46), 16, C_DIM)
-	else:
-		draw_circle(p, 13.0, C_WALL)
-		draw_circle(p, 8.0, _mask_col(sim.node_mask[i]) if wet_vis else C_BORE)
-		var col := Color(1, 1, 1, 0.55) if (hover_kind == "slot" and hover_id == i) else Color(1, 1, 1, 0.22)
-		_draw_dashed_rect(rect, col)
-		if not sim.started:
-			_txt("空位", p + Vector2(0, 46), 16, C_DIM)
-	if hover_kind == "slot" and hover_id == i:
-		draw_rect(rect.grow(4), Color(1, 1, 1, 0.5), false, 2.0)
-
-
-func _draw_dashed_rect(r: Rect2, col: Color) -> void:
-	var pts := [r.position, r.position + Vector2(r.size.x, 0), r.position + r.size, r.position + Vector2(0, r.size.y), r.position]
-	for k in 4:
-		var a: Vector2 = pts[k]
-		var b: Vector2 = pts[k + 1]
-		var d := a.distance_to(b)
-		var n := int(d / 10.0)
-		for j in range(0, n, 2):
-			draw_line(a.lerp(b, float(j) / n), a.lerp(b, float(j + 1) / n), col, 2.0)
+	art.node(self, i)
 
 
 func _draw_valve(e: int) -> void:
-	var p := _emid(e)
-	var open: bool = sim.edge_open[e]
-	var col: Color = C_VALVE_OPEN if open else C_VALVE_CLOSED
-	var r := Rect2(p - Vector2(17, 17), Vector2(34, 34))
-	draw_rect(r.grow(3), C_BG)
-	draw_rect(r, col)
-	_txt("开" if open else "关", p, 18, Color.WHITE)
-	if hover_kind == "valve" and hover_id == e:
-		draw_rect(r.grow(5), Color(1, 1, 1, 0.8), false, 2.0)
-	elif not open and sim.valves_left > 0:
-		var pulse := 0.25 + 0.2 * sin(Time.get_ticks_msec() / 280.0)
-		draw_rect(r.grow(5), Color(1, 1, 1, pulse), false, 2.0)
+	art.valve(self, e)
 
 
 func _draw_siphon_badge(e: int) -> void:
