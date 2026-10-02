@@ -14,6 +14,11 @@ func _init() -> void:
 		print("Level %d %s: solution -> %s (ticks=%d)" % [i + 1, lv["title"], "WIN" if r[0] else "FAIL", r[1]])
 		if not r[0]:
 			ok = false
+		for alternative in lv.get("alternatives", []):
+			var ra: Array = _run(lv, alternative)
+			print("    alternative -> %s" % ("WIN" if ra[0] else "FAIL"))
+			if not ra[0]:
+				ok = false
 		for bad in lv["bad"]:
 			var rb: Array = _run(lv, bad)
 			print("    attempt %s -> %s" % [str(bad), "WIN (unexpected!)" if rb[0] else "no win (expected)"])
