@@ -188,7 +188,9 @@ func _process(delta: float) -> void:
 		frac = clampf(acc / TICK, 0.0, 1.0)
 	if win_timer >= 0.0 and not won:
 		win_timer -= delta
-		if win_timer < 0.0:
+		if win_timer < 0.0 and not sim.settled:
+			win_timer = 0.0  # 终点都亮了，但水还没流完，等整幅图填满再宣布通关
+		elif win_timer < 0.0:
 			won = true
 			if lv_index + 1 < levels.size():
 				lbl_msg.text = "通关！" + levels[lv_index]["win"]
