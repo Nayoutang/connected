@@ -18,18 +18,3 @@
 - 弹簧阀：a 端节点连续有水 ≥ 阈值 tick 后弹开
 - 关着的阀门两侧各自灌水到阀门处
 
-## 文件结构
-- scripts/sim.gd     模拟核心
-- scripts/levels.gd  关卡数据（加关卡只改这里）
-- scripts/main.gd    绘制 / 输入 / UI（全部代码构建）
-- tests/run_tests.gd 无头验证所有关卡的解与错误方案：
-  `godot --headless --path . --script res://tests/run_tests.gd`
-
-## 字体
-使用系统字体显示中文（微软雅黑 / 苹方 / Noto Sans CJK 等）。导出到 Web 或手机时，
-请把一个 .ttf 放进项目，并在 main.gd 里把 SystemFont 换成 FontFile。
-
-## 多人协作
-- 开始改之前先拉取（GitHub Desktop：Fetch / Pull），改完一小块就提交并推送，别攒很久。
-- 分工：玩法规则与关卡主要改 `scripts/levels.gd`、`scripts/sim.gd`；UI/美术素材放 `assets/`。要改 `scripts/main.gd` 请先在群里说一声，避免同时修改同一个文件。
-- 提交信息写清楚改了什么，例如“第3关：调整水箱位置”。
