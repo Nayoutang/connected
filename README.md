@@ -1,4 +1,4 @@
-# 涌现 · 水管 Demo（Godot 4.3+）
+# 连通（涌现 · TapTap Game Jam）
 
 打开方式：Godot 4.3 或更高版本（项目已标 4.7） → 导入 `project.godot` → F5 运行。
 

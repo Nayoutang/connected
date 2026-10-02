@@ -1,5 +1,5 @@
 extends Node2D
-## 涌现 · 水管 Demo —— 主场景：绘制 + 输入 + UI（全部用代码构建，没有额外场景文件）
+## 连通 —— 主场景：绘制 + 输入 + UI（全部用代码构建，没有额外场景文件）
 
 const Levels = preload("res://scripts/levels.gd")
 const WaterSim = preload("res://scripts/sim.gd")
