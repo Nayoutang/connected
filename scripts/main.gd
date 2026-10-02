@@ -34,6 +34,7 @@ var win_timer := -1.0
 var won := false
 var settled_msg := false
 var flashes: Array = []
+var links: Array = []   # 因果连线：感应端 → 弹簧阀
 var hover_kind := ""
 var hover_id := -1
 
@@ -152,6 +153,7 @@ func _load_level(i: int) -> void:
 	won = false
 	settled_msg = false
 	flashes.clear()
+	links.clear()
 	lbl_title.text = "第 %d 关 · %s" % [i + 1, lv["title"]]
 	lbl_hint.text = lv["hint"]
 	lbl_msg.text = ""
@@ -196,6 +198,9 @@ func _process(delta: float) -> void:
 	for f in flashes:
 		f["t"] += delta
 	flashes = flashes.filter(func(f): return f["t"] < 0.7)
+	for l in links:
+		l["t"] += delta
+	links = links.filter(func(l): return l["t"] < 2.0)
 	_update_hover()
 	queue_redraw()
 
@@ -205,7 +210,11 @@ func _collect_events() -> void:
 		if ev[0] == "tank":
 			flashes.append({"pos": _npos(ev[1]), "t": 0.0, "col": C_WATER_HIGH})
 		elif ev[0] == "pop":
-			flashes.append({"pos": _emid(ev[1]), "t": 0.0, "col": C_SPRING})
+			var e: int = ev[1]
+			flashes.append({"pos": _emid(e), "t": 0.0, "col": C_SPRING})
+			flashes.append({"pos": _npos(sim.edge_a[e]), "t": 0.0, "col": C_SPRING})
+			links.append({"a": _npos(sim.edge_a[e]), "b": _emid(e), "t": 0.0})
+			lbl_msg.text = "弹簧阀弹开了：它的感应端持续有水 %d 步，水得以继续向前。" % sim.edge_thr[e]
 
 
 # ───────────────────────── 输入 ─────────────────────────
@@ -323,6 +332,14 @@ func _draw() -> void:
 		elif sim.edge_kind[e] == "spring":
 			_draw_spring(e)
 
+	for l in links:
+		var k: float = l["t"] / 2.0
+		var lc := C_SPRING
+		lc.a = 1.0 - k
+		var from: Vector2 = l["a"]
+		var to: Vector2 = l["b"]
+		draw_dashed_line(from, to, lc, 3.0, 10.0, true)
+		draw_arc(from, 20.0, 0.0, TAU, 32, lc, 3.0, true)
 	for f in flashes:
 		var t: float = f["t"] / 0.7
 		var c: Color = f["col"]

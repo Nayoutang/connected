@@ -203,7 +203,7 @@ func step() -> void:
 					edge_from[e] = s
 					edge_t0[e] = tick
 
-	# 5) 是否还在"酝酿"（水箱蓄水中 / 弹簧阀积水中）
+	# 5) 是否还在"酝酿"（水箱蓄水中 / 弹簧阀受水计数中）
 	var pending := false
 	for i in node_id.size():
 		if has_tank[i] and wet[i] and not tank_full[i]:
