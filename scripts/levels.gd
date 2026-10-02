@@ -167,10 +167,10 @@ static func get_levels() -> Array:
 		{
 			"title": "涌现",
 			"rows": 6,
-			"valves": 1,
+			"valves": 0,
 			"tanks": 1,
 			"hint": "左右两座高台上各有一个终点，水箱却只有 1 个。别急着数——先看看水能从哪儿流到哪儿。",
-			"win": "只放了一个水箱、开了一个阀门，整幅图却全都亮了——你没有逐个点亮它们，是水自己涌出来的。",
+			"win": "只放了一个水箱，整幅图却全都亮了——你没有逐个点亮它们，是水自己涌出来的。",
 			"nodes": [
 				["S", "source", 5, 1],
 				["F", "pipe", 5, 3],
@@ -205,14 +205,13 @@ static func get_levels() -> Array:
 				["v1", "v2"],
 				["v2", "v3"],
 				["v3", "GV"],
-				["GL", "GR", "valve"],
 			],
-			"solution": {"valves": [["GL", "GR"]], "tanks": ["u3"]},
+			"solution": {"valves": [], "tanks": ["u3"]},
 			"bad": [
-				{"valves": [["GL", "GR"]], "tanks": ["u2"]},
-				{"valves": [["GL", "GR"]], "tanks": ["v1"]},
-				{"valves": [], "tanks": ["u3"]},
-				{"valves": [], "tanks": ["v3"]},
+				{"valves": [], "tanks": ["u2"]},
+				{"valves": [], "tanks": ["v2"]},
+				{"valves": [], "tanks": ["u1"]},
+				{"valves": [], "tanks": []},
 			],
 		},
 	]
