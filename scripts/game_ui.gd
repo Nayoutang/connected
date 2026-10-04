@@ -43,7 +43,7 @@ func setup(host: Node, ui_font: Font) -> void:
 	pause.pressed.connect(func(): show_screen("pause"))
 	add_child(pause)
 	overlay = ColorRect.new()
-	overlay.color = Color(0.025, 0.045, 0.08, 0.96)
+	overlay.color = Color(0.025, 0.045, 0.08, 0.70)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
 	var center := CenterContainer.new()
@@ -66,7 +66,7 @@ func _label(text: String, font_size: int, color: Color = Color.WHITE) -> void:
 func _button(text: String, action: Callable) -> void:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size.y = 48
+	button.custom_minimum_size.y = 38 if screen == "levels" else 48
 	button.pressed.connect(action)
 	card.add_child(button)
 
@@ -81,6 +81,7 @@ func show_screen(next: String) -> void:
 	motion.tween_property(card, "modulate:a", 0.0, 0.12)
 	motion.tween_callback(func():
 		screen = next
+		card.add_theme_constant_override("separation", 3 if next == "levels" else 14)
 		for child in card.get_children():
 			card.remove_child(child)
 			child.queue_free()
@@ -105,9 +106,10 @@ func _build_screen(next: String) -> void:
 	match next:
 		"menu":
 			_label("连 通", 64, Color("6cdef2"))
-			_label("让水流相遇，让连锁发生", 24)
+			_label("退潮之后 · 百阶城", 24)
 			_label("第一章 · 重力篇 · 十个实验：草 / 花 / 树", 18, Color("95aabd"))
-			_button("开始探索", func(): game._load_level(0))
+			_button("归城 · 开始修复", func(): game.enter_level(0))
+			_button("涌现实验室 · 搭建自动水路", func(): get_tree().change_scene_to_file("res://lab.tscn"))
 			_button("选择关卡", func(): show_screen("levels"))
 			_button("玩法说明", func(): show_screen("help"))
 			_button("素材署名", func(): show_screen("credits"))
@@ -116,7 +118,7 @@ func _build_screen(next: String) -> void:
 			_label("选择实验", 36, Color("6cdef2"))
 			for i in game.levels.size():
 				var index: int = i
-				_button("%02d  ·  %s" % [i + 1, game.levels[i]["title"]], func(): game._load_level(index))
+				_button("%02d  ·  %s" % [i + 1, game.levels[i]["title"]], func(): game.enter_level(index))
 			_button("返回主菜单", func(): show_screen("menu"))
 		"pause":
 			_label("实验暂停", 40, Color("6cdef2"))
@@ -129,7 +131,8 @@ func _build_screen(next: String) -> void:
 			_label("① 放水前：点水箱空位放/收水箱；点弧形管上的圆钮装/拆虹吸管\n② 点击红色阀门打开通路，注意剩余次数\n③ 点击「放水」，让水到达所有终点\n④ 水不能超过水源/水箱的高度；虹吸管能翻过山头，但出口必须比水位低\n⑤ 不同颜色的水汇合会混色，花开出的颜色就是水的颜色\n\n快捷键：ESC 暂停 · [ ] 切关 · V 看本轮揭晓 · G 看花园", 20)
 			_button("返回主菜单", func(): show_screen("menu"))
 		"credits":
-			_label("开源素材", 36, Color("6cdef2"))
+			_label("素材署名", 36, Color("6cdef2"))
+			_label("城市 / 人物：AI 生成像素美术", 18)
 			_label("水管：Kenney · Puzzle Pack 2 · CC0", 20)
 			_label("阀门 / 水箱 / 喷泉：Delapouite · CC BY 3.0", 20)
 			_label("水滴：sbed · Game-icons.net · CC BY 3.0", 20)
@@ -168,6 +171,8 @@ func reveal_level() -> void:
 	motion.tween_callback(func(): card.show())
 
 func _input(event: InputEvent) -> void:
+	if game.story != null and game.story.active:
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if switching:
 			return

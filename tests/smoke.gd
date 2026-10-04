@@ -14,6 +14,7 @@ var levels: Array
 func _initialize() -> void:
 	levels = Chapter.get_levels()
 	main = load("res://main.tscn").instantiate()
+	main.set_meta("skip_story", true)
 	root.add_child(main)
 
 func _process(delta: float) -> bool:
