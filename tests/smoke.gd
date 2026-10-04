@@ -11,6 +11,7 @@ var results := []
 
 func _initialize() -> void:
 	main = load("res://main.tscn").instantiate()
+	main.set_meta("skip_story", true)
 	root.add_child(main)
 
 func _process(delta: float) -> bool:

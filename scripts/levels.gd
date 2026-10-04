@@ -109,8 +109,8 @@ static func get_levels() -> Array:
 				["Q", "G1"],
 			],
 			"solution": {"valves": [["F", "P1"]], "tanks": []},
+			"alternatives": [{"valves": [["F", "Q"]], "tanks": []}],
 			"bad": [
-				{"valves": [["F", "Q"]], "tanks": []},
 				{"valves": [], "tanks": []},
 			],
 		},

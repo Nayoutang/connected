@@ -10,7 +10,6 @@ const VIEW_W := 1280.0
 const DESIGN_SIZE := Vector2i(1280, 720)
 
 const C_BG := Color(0.07, 0.08, 0.11)
-const C_GUIDE := Color(1, 1, 1, 0.05)
 const C_WALL := Color(0.30, 0.33, 0.40)
 const C_BORE := Color(0.09, 0.10, 0.13)
 const C_WATER_LOW := Color(0.62, 0.86, 1.0)
@@ -49,6 +48,9 @@ var btn_reset: Button
 var btn_next: Button
 var navigation: Control
 var ui_paused := false
+var story: CanvasLayer
+var backdrop: Node2D
+const StoryData = preload("res://scripts/story_data.gd")
 
 
 func _ready() -> void:
@@ -62,6 +64,11 @@ func _ready() -> void:
 	navigation = preload("res://scripts/game_ui.gd").new()
 	get_child(0).add_child(navigation)
 	navigation.setup(self, font)
+	backdrop = preload("res://scripts/story_backdrop.gd").new()
+	add_child(backdrop)
+	backdrop.set_region(false, lv_index)
+	story = preload("res://scripts/story_dialogue.gd").new()
+	add_child(story)
 
 
 func _configure_display() -> void:
@@ -136,7 +143,9 @@ func _make_button(parent: Node, text: String, pos: Vector2) -> Button:
 
 
 func _on_start() -> void:
-	if ui_paused:
+	if story != null and story.active:
+		return
+	if ui_paused or (story != null and story.active):
 		navigation.hide_screen()
 	if running:
 		return
@@ -154,11 +163,18 @@ func _on_reset() -> void:
 
 func _on_next() -> void:
 	if lv_index + 1 < levels.size():
-		_load_level(lv_index + 1)
+		enter_level(lv_index + 1)
 
 
 # ───────────────────────── 关卡流程 ─────────────────────────
+func enter_level(i: int) -> void:
+	_load_level(i)
+	if not get_meta("skip_story", false):
+		story.play(StoryData.chapter(false, i))
+
 func _load_level(i: int) -> void:
+	if backdrop != null:
+		backdrop.set_region(false, i)
 	lv_index = i
 	var lv: Dictionary = levels[i]
 	sim = WaterSim.new()
@@ -192,7 +208,7 @@ func _update_status() -> void:
 
 
 func _process(delta: float) -> void:
-	if ui_paused:
+	if ui_paused or (story != null and story.active):
 		return
 	if running and not won:
 		if sim.settled:
@@ -219,7 +235,12 @@ func _process(delta: float) -> void:
 				btn_next.disabled = false
 			else:
 				lbl_msg.text = "全部通关！" + levels[lv_index]["win"] + "（Demo 到此结束）"
-			navigation.show_screen("win")
+			backdrop.celebrate()
+			if not get_meta("skip_story", false):
+				story.play(StoryData.chapter(false, lv_index, true))
+				story.finished.connect(func(): navigation.show_screen("win"), CONNECT_ONE_SHOT)
+			else:
+				navigation.show_screen("win")
 	for f in flashes:
 		f["t"] += delta
 	flashes = flashes.filter(func(f): return f["t"] < 0.7)
@@ -254,7 +275,7 @@ func _update_hover() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if ui_paused:
+	if ui_paused or (story != null and story.active):
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if hover_kind == "valve":
@@ -310,12 +331,9 @@ func _txt(text: String, center: Vector2, size: int, col: Color) -> void:
 func _draw() -> void:
 	if sim == null:
 		return
-	draw_rect(Rect2(0, 0, VIEW_W, 720), C_BG)
+	draw_rect(Rect2(12, 8, 1256, 704), Color(0.035, 0.065, 0.10, 0.55))
 
-	# 高度参考线 + 左侧"高/低"标尺
-	for r in range(0, 6):
-		var y := origin.y + r * CELL
-		draw_line(Vector2(60, y), Vector2(VIEW_W - 40, y), C_GUIDE, 1.0)
+	# 左侧高低标尺保留；背景不再绘制网格。
 	draw_line(Vector2(34, origin.y), Vector2(34, origin.y + 5 * CELL), C_DIM, 2.0, true)
 	draw_colored_polygon(PackedVector2Array([Vector2(34, origin.y + 5 * CELL + 12), Vector2(26, origin.y + 5 * CELL), Vector2(42, origin.y + 5 * CELL)]), C_DIM)
 	_txt("高", Vector2(34, origin.y - 18), 18, C_DIM)

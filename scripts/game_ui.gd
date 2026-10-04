@@ -42,7 +42,7 @@ func setup(host: Node, ui_font: Font) -> void:
 	pause.pressed.connect(func(): show_screen("pause"))
 	add_child(pause)
 	overlay = ColorRect.new()
-	overlay.color = Color(0.025, 0.045, 0.08, 0.96)
+	overlay.color = Color(0.025, 0.045, 0.08, 0.70)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(overlay)
 	var center := CenterContainer.new()
@@ -104,9 +104,10 @@ func _build_screen(next: String) -> void:
 	match next:
 		"menu":
 			_label("连 通", 64, Color("6cdef2"))
-			_label("让水流相遇，让连锁发生", 24)
+			_label("退潮之后 · 百阶城", 24)
 			_label("四个实验 · 连通器 / 阀门 / 水箱 / 弹簧阀", 18, Color("95aabd"))
-			_button("开始探索", func(): game._load_level(0))
+			_button("归城 · 开始修复", func(): game.enter_level(0))
+			_button("涌现实验室 · 搭建自动水路", func(): get_tree().change_scene_to_file("res://lab.tscn"))
 			_button("选择关卡", func(): show_screen("levels"))
 			_button("玩法说明", func(): show_screen("help"))
 			_button("素材署名", func(): show_screen("credits"))
@@ -115,7 +116,7 @@ func _build_screen(next: String) -> void:
 			_label("选择实验", 36, Color("6cdef2"))
 			for i in game.levels.size():
 				var index: int = i
-				_button("%02d  ·  %s" % [i + 1, game.levels[i]["title"]], func(): game._load_level(index))
+				_button("%02d  ·  %s" % [i + 1, game.levels[i]["title"]], func(): game.enter_level(index))
 			_button("返回主菜单", func(): show_screen("menu"))
 		"pause":
 			_label("实验暂停", 40, Color("6cdef2"))
@@ -128,7 +129,8 @@ func _build_screen(next: String) -> void:
 			_label("① 放水前点击带加号的水箱空位，放置或收回水箱\n② 点击红色阀门打开通路，注意剩余次数\n③ 点击「放水」，让水流到达所有终点\n④ 水无法超过水源高度；弹簧阀积水后自动打开\n\nESC 暂停 / 继续 · 方向键与回车选择菜单", 20)
 			_button("返回主菜单", func(): show_screen("menu"))
 		"credits":
-			_label("开源素材", 36, Color("6cdef2"))
+			_label("素材署名", 36, Color("6cdef2"))
+			_label("城市 / 人物：AI 生成像素美术", 18)
 			_label("水管：Kenney · Puzzle Pack 2 · CC0", 20)
 			_label("阀门 / 弹簧 / 水箱 / 喷泉：Delapouite · CC BY 3.0", 20)
 			_label("水滴：sbed · Game-icons.net · CC BY 3.0", 20)
@@ -167,6 +169,8 @@ func reveal_level() -> void:
 	motion.tween_callback(func(): card.show())
 
 func _input(event: InputEvent) -> void:
+	if game.story != null and game.story.active:
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if switching:
 			return
