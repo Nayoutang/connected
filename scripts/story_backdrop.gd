@@ -1,7 +1,7 @@
 extends Node2D
 ## One shared backdrop; bounded procedural particles without per-frame nodes.
 const CITY = preload("res://assets/story/baijie.png")
-const LESSON_REGIONS = ["gate", "old_street", "reservoir", "clocktower"]
+const LESSON_REGIONS = ["gate", "old_street", "reservoir", "clocktower", "greenhouse", "nursery", "old_street", "households", "reservoir", "nursery"]
 const LAB_REGIONS = ["greenhouse", "households", "nursery"]
 var current_texture: Texture2D = CITY
 var region := "baijie"

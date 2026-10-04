@@ -15,9 +15,9 @@ func _init() -> void:
 		if not r[0]:
 			ok = false
 		for alternative in lv.get("alternatives", []):
-			var alternative_result := _run(lv, alternative)
-			print("    alternative -> ", "WIN" if alternative_result[0] else "FAIL")
-			if not alternative_result[0]:
+			var ra: Array = _run(lv, alternative)
+			print("    alternative -> %s" % ("WIN" if ra[0] else "FAIL"))
+			if not ra[0]:
 				ok = false
 		for bad in lv["bad"]:
 			var rb: Array = _run(lv, bad)

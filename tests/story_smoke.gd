@@ -32,6 +32,23 @@ func run() -> void:
 	await shot("story-cen")
 	game.story.close()
 	check(not game.story.active, "Skip should dismiss story")
+	for i in game.levels.size():
+		game.enter_level(i)
+		check(game.story.active, "Missing chapter introduction %d" % i)
+		check(not game.story.body.text.is_empty(), "Empty chapter dialogue")
+		game.story.close()
+		await create_timer(0.25).timeout
+		game.sim = game._solved_sim(game.levels[i])
+		game.running = true
+		game.win_timer = 0.1
+		game._process(0.2)
+		check(game.won and game.story.active, "Missing chapter ending %d" % i)
+		game.story.close()
+		game._on_next()
+		if game.levels[i]["caption"] != "":
+			check(game.mode == "reveal", "Story must preserve chapter reveal")
+		if game.story.active:
+			game.story.close()
 	game.queue_free()
 	await process_frame
 	var lab = load("res://lab.tscn").instantiate()

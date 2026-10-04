@@ -13,3 +13,8 @@ Use case: illustration-story. Game background asset, landscape 16:9. Crisp low-r
 Use case: illustration-story. A game dialogue character portrait asset on genuinely transparent background. Young adult Chinese female waterworks repairer A-Cheng, short dark teal hair, brass goggles on head, indigo work jacket rolled sleeves, warm ochre scarf, tool belt, one hand holding a small wrench, hopeful thoughtful expression. Three quarter view facing slightly right, waist-up complete silhouette with head and elbows uncut. Crisp deliberate retro pixel art with large visible square pixel clusters as if drawn on a 128 by 160 pixel canvas then nearest-neighbor enlarged; limited 24-color blue gray teal ochre palette, hard pixel edges, no smooth gradients no antialiasing no text no ground shadow. For a warm post-drought hillside city puzzle game.
 
 Use case: illustration-story. Transparent game dialogue portrait of Uncle Cen, elderly Chinese waterworks keeper, short silver hair and moustache, kind weathered face, round brass glasses, navy work coat with teal collar, holds rolled old pipe blueprint. Waist-up complete silhouette, facing slightly left, all head elbows inside frame. Crisp retro pixel art, large visible square pixel clusters as if 128x160 nearest neighbor enlarged, limited bluegray teal brass ochre palette, hard pixel edges, no antialiasing no smooth gradients. Warm hopeful post-drought hillside city. No text, no background, no ground shadow. Match a young repairer with brass goggles indigo jacket and ochre scarf.
+
+
+## 主分支合并更新
+
+已兼容第一章十关（虹吸、混色、草花树揭晓）及三关涌现实验室。原四关剧情已扩展为十关，不再按四关索引读取。七张区域图继续使用：第一章依次为归城、旧街、高台、钟楼、温室、苗圃、旧街、双户街区、高台、苗圃；实验室为温室、双户街区、苗圃。新关卡暂按地点复用现有区域美术。

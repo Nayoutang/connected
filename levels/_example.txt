@@ -1,0 +1,21 @@
+# 示例：两条路二选一的多解关（文件名以 _ 开头也会被读到，改名或删掉即可）
+title 示例多解
+rows 6
+valves 1
+tanks 0
+hint 两个阀门位置，只能开一个。
+win 路线不同，结果都是水流到终点。
+node S source 3 0
+node F pipe 3 2
+node L pipe 1 3
+node R pipe 5 3
+node M pipe 3 4
+node G goal 3 5
+edge S F
+edge F L valve
+edge F R valve
+edge L M
+edge R M
+edge M G
+solution F-L
+alt F-R

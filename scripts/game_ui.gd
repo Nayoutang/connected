@@ -35,6 +35,7 @@ func setup(host: Node, ui_font: Font) -> void:
 	game.btn_start.theme = theme_data
 	game.btn_reset.theme = theme_data
 	game.btn_next.theme = theme_data
+	game.btn_prev.theme = theme_data
 	var pause := Button.new()
 	pause.text = "暂停 / ESC"
 	pause.position = Vector2(1070, 16)
@@ -65,7 +66,7 @@ func _label(text: String, font_size: int, color: Color = Color.WHITE) -> void:
 func _button(text: String, action: Callable) -> void:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size.y = 48
+	button.custom_minimum_size.y = 38 if screen == "levels" else 48
 	button.pressed.connect(action)
 	card.add_child(button)
 
@@ -80,6 +81,7 @@ func show_screen(next: String) -> void:
 	motion.tween_property(card, "modulate:a", 0.0, 0.12)
 	motion.tween_callback(func():
 		screen = next
+		card.add_theme_constant_override("separation", 3 if next == "levels" else 14)
 		for child in card.get_children():
 			card.remove_child(child)
 			child.queue_free()
@@ -105,7 +107,7 @@ func _build_screen(next: String) -> void:
 		"menu":
 			_label("连 通", 64, Color("6cdef2"))
 			_label("退潮之后 · 百阶城", 24)
-			_label("四个实验 · 连通器 / 阀门 / 水箱 / 弹簧阀", 18, Color("95aabd"))
+			_label("第一章 · 重力篇 · 十个实验：草 / 花 / 树", 18, Color("95aabd"))
 			_button("归城 · 开始修复", func(): game.enter_level(0))
 			_button("涌现实验室 · 搭建自动水路", func(): get_tree().change_scene_to_file("res://lab.tscn"))
 			_button("选择关卡", func(): show_screen("levels"))
@@ -126,13 +128,13 @@ func _build_screen(next: String) -> void:
 			_button("返回主菜单", func(): show_screen("menu"))
 		"help":
 			_label("玩法说明", 36, Color("6cdef2"))
-			_label("① 放水前点击带加号的水箱空位，放置或收回水箱\n② 点击红色阀门打开通路，注意剩余次数\n③ 点击「放水」，让水流到达所有终点\n④ 水无法超过水源高度；弹簧阀积水后自动打开\n\nESC 暂停 / 继续 · 方向键与回车选择菜单", 20)
+			_label("① 放水前：点水箱空位放/收水箱；点弧形管上的圆钮装/拆虹吸管\n② 点击红色阀门打开通路，注意剩余次数\n③ 点击「放水」，让水到达所有终点\n④ 水不能超过水源/水箱的高度；虹吸管能翻过山头，但出口必须比水位低\n⑤ 不同颜色的水汇合会混色，花开出的颜色就是水的颜色\n\n快捷键：ESC 暂停 · [ ] 切关 · V 看本轮揭晓 · G 看花园", 20)
 			_button("返回主菜单", func(): show_screen("menu"))
 		"credits":
 			_label("素材署名", 36, Color("6cdef2"))
 			_label("城市 / 人物：AI 生成像素美术", 18)
 			_label("水管：Kenney · Puzzle Pack 2 · CC0", 20)
-			_label("阀门 / 弹簧 / 水箱 / 喷泉：Delapouite · CC BY 3.0", 20)
+			_label("阀门 / 水箱 / 喷泉：Delapouite · CC BY 3.0", 20)
 			_label("水滴：sbed · Game-icons.net · CC BY 3.0", 20)
 			_label("图标以原始 SVG 使用，游戏内缩放及着色。", 18, Color("95aabd"))
 			_button("Kenney 素材与许可", func(): OS.shell_open("https://kenney.nl/assets/puzzle-pack-2"))

@@ -8,7 +8,7 @@ func run() -> void:
   scene.set_meta("skip_story", true)
   root.add_child(scene)
   await create_timer(0.6).timeout
-  for i in (3 if lab_mode else 4):
+  for i in scene.levels.size():
    if lab_mode:
     scene._load(i)
    else:
@@ -16,11 +16,10 @@ func run() -> void:
    await create_timer(0.3).timeout
    var texture: Texture2D = scene.backdrop.current_texture
    assert(texture != null)
-   assert(not paths.has(texture.resource_path))
    paths[texture.resource_path] = true
    await RenderingServer.frame_post_draw
    root.get_texture().get_image().save_png("res://../lab-previews/region-" + scene.backdrop.region + ".png")
   scene.queue_free()
   await process_frame
- print("REGIONS: 7 unique backgrounds loaded and rendered")
+ print("REGIONS: 13 levels loaded and rendered across seven regions")
  quit()

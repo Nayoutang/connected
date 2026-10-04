@@ -57,3 +57,8 @@ Pixel art game background 16:9 landscape. Scene 6 TWO HOUSEHOLDS SHARED WATER CO
 最终提示词：
 
 Pixel art game background 16:9 landscape. Scene 7 UNATTENDED COMMUNITY NURSERY in Baijie Chinese hillside town. Quiet walled garden nursery, rows of small young seedlings in raised wooden beds at left and right, compact elevated brass header tank with mechanical float lever and irrigation pipes at right, simple potting shed at left, glass coldframes, broad uncluttered central earth-and-stone path leading to moon gate overlooking blue tiled city. Early fresh sunrise, dew and restrained new green growth, hopeful autonomous garden. Crisp visible pixel clusters bluegray teal brass sage palette, matching retro pixel waterworks game. No people no labels no text no UI no grid no watermark.
+
+
+## 主分支合并更新
+
+已兼容第一章十关（虹吸、混色、草花树揭晓）及三关涌现实验室。原四关剧情已扩展为十关，不再按四关索引读取。七张区域图继续使用：第一章依次为归城、旧街、高台、钟楼、温室、苗圃、旧街、双户街区、高台、苗圃；实验室为温室、双户街区、苗圃。新关卡暂按地点复用现有区域美术。
