@@ -44,3 +44,36 @@
 - 开始改之前先拉取，改完一小块就提交并推送，别攒很久。
 - 分工：玩法规则与关卡主要改 `scripts/sim.gd`、`scripts/chapter1.gd`；UI/美术放 `assets/`、`scripts/game_art.gd`、`scripts/game_ui.gd`。要改 `scripts/main.gd` 请先在群里说一声，避免同时修改同一个文件。
 - 提交信息写清楚改了什么，例如“第3关：调整水箱位置”。
+
+## 第 11—13 关 · 自行运转的街区
+
+第一章修复报告后继续进入第 11—13 关，统一选关页可直接进入：有限水量、水箱、换向阀、单向阀和浮子反馈。这里的水量模型与第一章的教学模型分离，详见 [实验室说明](docs/emergent-lab.md)。
+
+全部十三关都有像素人物和底部剧情对话，空格推进、Esc 跳过。沿用七个区域背景，新增第一章关卡按故事地点复用对应区域；保持无网格。素材及提示词见 [美术说明](docs/story-art.md) 和 [场景说明](docs/region-scenes.md)。
+
+第11—13关与前十关共用标题、底栏、暂停菜单和管道美术，使用直接点击操作：空位放/收水箱，阀门开关或换向，池间箭头安装/反向/拆除单向阀。点击容器旁「浮」安装或拆除默认浮子，右键可选择其他控制目标。取消实验室侧栏、单步和调试参数。
+
+阶段结算改为修复报告：展示对应区域、规则小结和当前游玩记录，不再播放管道拼草/花/树动画。报告仅短暂淡入，可立即继续。
+
+
+## 3D 角色、第一人称探索与组件比例
+
+进入「水路地图」即可探索城市与七个街区。WASD 移动，按住右键转头，Shift 快走，F 交互，M 地图，V 切换第一/第三人称（探索之外仍使用原界面快捷键）。
+
+- 新主角约 2.18 万三角面、66 个骨骼，含待机、走动和挥手。跑步目前复用加速走动。
+- 中式房屋与店铺接入现有场景；程序化石板地面按世界坐标铺设。
+- 1 世界单位按 1 米设计。主角高 1.65 米、眼高 1.52 米；房屋宽 7.2 / 高约 6.57 米，店铺宽 6.4 / 高约 6.92 米。建筑三轴等比缩放，导航阻挡按模型包围盒生成。
+- 尺寸统一配置：`scripts/world_dimensions.gd`；完整设计：`docs/组件尺寸设计.md`。
+- 模型与动画入口：`scenes/characters/adventure_character.tscn`；走动资源：`assets/characters/animations/walk.tres`。
+
+验证命令（Godot 4.7.2）：
+
+```sh
+godot --headless --editor --import --path .
+godot --headless --path . --script res://tests/character_smoke.gd
+godot --headless --path . --script res://tests/first_person_smoke.gd
+godot --headless --path . --script res://tests/scale_smoke.gd
+godot --headless --path . --script res://tests/garden_smoke.gd
+```
+
+当前探索沿用二维导航和高度采样，不包含跳跃、建筑内部或完整三维刚体碰撞。

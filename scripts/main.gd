@@ -1,6 +1,7 @@
 extends Node2D
 ## 连通 —— 主场景：绘制 + 输入 + UI（全部用代码构建，没有额外场景文件）
 
+const Campaign = preload("res://scripts/campaign.gd")
 const Chapter1 = preload("res://scripts/chapter1.gd")
 const WaterSim = preload("res://scripts/sim.gd")
 
@@ -10,7 +11,6 @@ const VIEW_W := 1280.0
 const DESIGN_SIZE := Vector2i(1280, 720)
 
 const C_BG := Color(0.07, 0.08, 0.11)
-const C_GUIDE := Color(1, 1, 1, 0.05)
 const C_WALL := Color(0.30, 0.33, 0.40)
 const C_BORE := Color(0.09, 0.10, 0.13)
 const C_WATER_LOW := Color(0.62, 0.86, 1.0)
@@ -55,11 +55,9 @@ var hover_id := -1
 var lit_time := {}           # 终点第一次亮起的时间（花草长出来用）
 var mode := "play"           # play / reveal / garden
 var reveal_t := 0.0
-var reveal_entries: Array = []
-var reveal_rect := Rect2()
+var report: Control
+var completed_levels: Dictionary = {}
 var reveal_key := ""
-var reveal_gap := 1.4
-var reveal_ground := 640.0
 
 var lbl_title: Label
 var lbl_hint: Label
@@ -71,6 +69,10 @@ var btn_next: Button
 var btn_prev: Button
 var navigation: Control
 var ui_paused := false
+var transition: CanvasLayer
+var story: CanvasLayer
+var backdrop: Node2D
+const StoryData = preload("res://scripts/story_data.gd")
 
 
 func _ready() -> void:
@@ -84,6 +86,19 @@ func _ready() -> void:
 	navigation = preload("res://scripts/game_ui.gd").new()
 	get_child(0).add_child(navigation)
 	navigation.setup(self, font)
+	backdrop = preload("res://scripts/story_backdrop.gd").new()
+	add_child(backdrop)
+	backdrop.set_region(false, lv_index)
+	story = preload("res://scripts/story_dialogue.gd").new()
+	add_child(story)
+	transition = preload("res://scripts/level_transition.gd").new()
+	add_child(transition)
+	report = preload("res://scripts/restoration_report.gd").new()
+	get_child(0).add_child(report)
+	get_child(0).move_child(report, 1)
+	report.hide()
+	if get_tree().root.has_meta("campaign_level"):
+		enter_level.call_deferred(Campaign.take_level(get_tree(), 0))
 
 
 func _configure_display() -> void:
@@ -159,7 +174,11 @@ func _make_button(parent: Node, text: String, pos: Vector2) -> Button:
 
 
 func _on_start() -> void:
-	if ui_paused:
+	if transition != null and transition.active:
+		return
+	if story != null and story.active:
+		return
+	if (transition != null and transition.active) or ui_paused or (story != null and story.active):
 		navigation.hide_screen()
 	if running:
 		return
@@ -177,7 +196,7 @@ func _on_reset() -> void:
 
 func _on_prev() -> void:
 	if mode == "play" and lv_index > 0:
-		_load_level(lv_index - 1)
+		enter_level(lv_index - 1)
 
 
 func _on_next() -> void:
@@ -186,18 +205,34 @@ func _on_next() -> void:
 		if lv["caption"] != "":
 			_start_reveal(lv["round"])
 		elif lv_index + 1 < levels.size():
-			_load_level(lv_index + 1)
+			enter_level(lv_index + 1)
 	elif mode == "reveal":
 		if lv_index + 1 < levels.size():
-			_load_level(lv_index + 1)
+			enter_level(lv_index + 1)
 		else:
-			_start_reveal("")
+			Campaign.open_level(get_tree(), 10)
 	else:
-		_load_level(0)
+		Campaign.open_level(get_tree(), 10)
 
 
 # ───────────────────────── 关卡流程 ─────────────────────────
+func enter_level(i: int) -> void:
+	if i >= Campaign.FIRST_CHAPTER_COUNT:
+		Campaign.open_level(get_tree(), i)
+		return
+	_load_level(i)
+	transition.present(self, func():
+		if not get_meta("skip_story", false):
+			story.play(StoryData.chapter(false, i))
+	)
+
 func _load_level(i: int) -> void:
+	if transition != null:
+		transition.cancel()
+	if report != null:
+		report.hide()
+	if backdrop != null:
+		backdrop.set_region(false, i)
 	lv_index = i
 	mode = "play"
 	_set_play_ui(true)
@@ -252,7 +287,7 @@ func _update_status() -> void:
 
 
 func _process(delta: float) -> void:
-	if ui_paused:
+	if (transition != null and transition.active) or ui_paused or (story != null and story.active):
 		return
 	if mode != "play":
 		_process_reveal(delta)
@@ -282,9 +317,17 @@ func _process(delta: float) -> void:
 			win_timer = 0.0  # 终点都亮了，但水还没流完，等整幅图填满再宣布通关
 		elif win_timer < 0.0:
 			won = true
+			var city_completed: Array = get_tree().root.get_meta("city_completed", []).duplicate()
+			if lv_index not in city_completed:
+				city_completed.append(lv_index)
+			get_tree().root.set_meta("city_completed", city_completed)
+			completed_levels[lv_index] = true
 			lbl_msg.text = "通关！" + levels[lv_index]["win"]
-			btn_next.text = "揭晓" if levels[lv_index]["caption"] != "" else "下一关"
+			btn_next.text = "修复报告" if levels[lv_index]["caption"] != "" else "下一关"
 			btn_next.disabled = false
+			backdrop.celebrate()
+			if not get_meta("skip_story", false):
+				story.play(StoryData.chapter(false, lv_index, true))
 	for f in flashes:
 		f["t"] += delta
 	flashes = flashes.filter(func(f): return f["t"] < 0.7)
@@ -323,14 +366,14 @@ func _update_hover() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if ui_paused:
+	if (transition != null and transition.active) or ui_paused or (story != null and story.active):
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
-		# 调试/试玩用的快捷键：[ ] 切关，V 看本轮揭晓，G 看花园
+		# 调试/试玩用的快捷键：[ ] 切关，V 看阶段报告，G 看阶段总览
 		if event.keycode == KEY_BRACKETRIGHT and lv_index + 1 < levels.size():
-			_load_level(lv_index + 1)
+			enter_level(lv_index + 1)
 		elif event.keycode == KEY_BRACKETLEFT and lv_index > 0:
-			_load_level(lv_index - 1)
+			enter_level(lv_index - 1)
 		elif event.keycode == KEY_V and mode == "play":
 			_start_reveal(levels[lv_index]["round"])
 		elif event.keycode == KEY_G and mode == "play":
@@ -639,15 +682,12 @@ func _draw_flora(kind: String, p: Vector2, size: float, col: Color, grow: float)
 func _draw() -> void:
 	if sim == null:
 		return
-	draw_rect(Rect2(0, 0, VIEW_W, 720), C_BG)
+	draw_rect(Rect2(12, 8, 1256, 704), Color(0.035, 0.065, 0.10, 0.55))
 	if mode != "play":
 		_draw_reveal()
 		return
 
-	# 高度参考线 + 左侧"高/低"标尺
-	for r in range(0, 6):
-		var y := origin.y + r * CELL
-		draw_line(Vector2(60, y), Vector2(VIEW_W - 40, y), C_GUIDE, 1.0)
+	# 保留高低标尺，不绘制背景网格。
 	draw_line(Vector2(34, origin.y), Vector2(34, origin.y + 5 * CELL), C_DIM, 2.0, true)
 	draw_colored_polygon(PackedVector2Array([Vector2(34, origin.y + 5 * CELL + 12), Vector2(26, origin.y + 5 * CELL), Vector2(42, origin.y + 5 * CELL)]), C_DIM)
 	_txt("高", Vector2(34, origin.y - 18), 18, C_DIM)
@@ -750,137 +790,22 @@ func _solved_sim(lv: Dictionary):
 	return s
 
 
-## key = "grass"/"flower"/"tree" 揭晓一轮；key = "" 揭晓整座花园
+## Stage report: no re-simulation, decorative pipe collage or forced waiting.
 func _start_reveal(key: String) -> void:
 	reveal_key = key
 	mode = "reveal" if key != "" else "garden"
 	reveal_t = 0.0
-	reveal_entries.clear()
-	var min_c := 9999.0
-	var min_r := 9999.0
-	var max_c := -9999.0
-	var max_r := -9999.0
-	var last_i := lv_index
-	for i in levels.size():
-		var lv: Dictionary = levels[i]
-		if key != "" and lv["round"] != key:
-			continue
-		var s = _solved_sim(lv)
-		var ox: int = lv["reveal"][0]
-		var oy: int = lv["reveal"][1]
-		var mc := 0
-		for c in s.node_col:
-			mc = maxi(mc, c)
-		min_c = minf(min_c, float(ox))
-		min_r = minf(min_r, float(oy))
-		max_c = maxf(max_c, float(ox + mc + 1))
-		max_r = maxf(max_r, float(oy + lv["rows"]))
-		reveal_entries.append({"sim": s, "lv": lv, "ox": ox, "oy": oy, "i": i})
-		last_i = i
-	lv_index = last_i
-	var w := max_c - min_c
-	var h := max_r - min_r
-	var sc := minf(minf(1160.0 / (w * CELL), 440.0 / (h * CELL)), 0.55)
-	var cell := CELL * sc
-	var base := Vector2(640.0 - (min_c + w * 0.5) * cell, 340.0 - (min_r + h * 0.5) * cell)
-	reveal_ground = base.y + max_r * cell
-	reveal_rect = Rect2(base, Vector2(cell, sc))   # position = 画布原点, size.x = 每格像素, size.y = 缩放比
-	reveal_gap = 0.7 if key == "" else 1.4
 	_set_play_ui(false)
-	lbl_title.text = "揭晓……"
-	lbl_hint.text = "你一路解开的管道，拼在一起——"
+	lbl_title.text = "百阶城 · 修复记录"
+	lbl_hint.text = ""
 	lbl_msg.text = ""
-	btn_next.disabled = true
-	btn_next.text = "继续"
+	btn_next.disabled = false
+	btn_next.text = "第 11 关" if lv_index == 9 or key == "" else "下一关"
+	report.present(key, completed_levels, font)
 	queue_redraw()
-
 
 func _process_reveal(delta: float) -> void:
 	reveal_t += delta
-	t_now += delta
-	var total: float = float(reveal_entries.size()) * reveal_gap + 2.6
-	if reveal_t >= total and btn_next.disabled:
-		btn_next.disabled = false
-		if mode == "garden":
-			lbl_title.text = "第一章 · 重力篇 · 花园"
-			lbl_hint.text = ""
-			lbl_msg.text = "三轮，十关，一座花园。你只放了几个水箱、开了几个阀门、装了几根虹吸管——剩下的，是水自己长出来的。"
-			btn_next.text = "再玩一遍"
-		else:
-			lbl_title.text = "揭晓：" + ROUND_NAMES.get(reveal_key, "")
-			lbl_hint.text = ""
-			lbl_msg.text = reveal_entries[reveal_entries.size() - 1]["lv"]["caption"]
-	queue_redraw()
-
 
 func _draw_reveal() -> void:
-	var org: Vector2 = reveal_rect.position
-	var cell: float = reveal_rect.size.x
-	var sc: float = reveal_rect.size.y
-	var n := float(reveal_entries.size())
-	# 第二幕：管道淡去，终点长成真正的花草树
-	var q: float = clampf((reveal_t - (n * reveal_gap + 0.3)) / 1.6, 0.0, 1.0)
-	var a_mul := 1.0 - 0.72 * q
-	draw_rect(Rect2(0, 640, VIEW_W, 80), Color(0.10, 0.16, 0.12))
-	var goals := {"grass": [], "flower": [], "leaf": []}
-	for k in reveal_entries.size():
-		var en: Dictionary = reveal_entries[k]
-		var g: float = clampf((reveal_t - float(k) * reveal_gap) / (reveal_gap * 0.9), 0.0, 1.0)
-		if g <= 0.0:
-			continue
-		var s = en["sim"]
-		var lorg: Vector2 = org + Vector2(float(en["ox"]), float(en["oy"])) * cell
-		var wd := maxf(2.0, 22.0 * sc)
-		var al := g * a_mul
-		for e in s.edge_a.size():
-			if s.edge_kind[e] == "siphon" and not s.edge_open[e]:
-				continue
-			if s.edge_kind[e] == "valve" and not s.edge_open[e]:
-				continue
-			var pts := _epath_g(s, e, lorg, cell)
-			draw_polyline(pts, Color(C_WALL.r, C_WALL.g, C_WALL.b, al), wd, true)
-			for qq in range(1, pts.size() - 1):
-				draw_circle(pts[qq], wd * 0.5, Color(C_WALL.r, C_WALL.g, C_WALL.b, al))
-		for e in s.edge_a.size():
-			if s.edge_from[e] < 0:
-				continue
-			var pts2 := _epath_g(s, e, lorg, cell)
-			var wc := _mask_col(s.node_mask[s.edge_from[e]])
-			wc.a = al
-			draw_polyline(pts2, wc, wd * 0.6, true)
-			for qq in range(1, pts2.size() - 1):
-				draw_circle(pts2[qq], wd * 0.3, wc)
-		var flora: String = en["lv"]["flora"]
-		for i in s.node_id.size():
-			var p: Vector2 = _npos_g(s, i, lorg, cell)
-			if s.node_kind[i] == "goal":
-				var fc: Color = _mask_col(s.node_mask[i]) if flora == "flower" else C_GRASS
-				goals[flora].append({"p": p, "c": fc, "g": g})
-			elif s.node_kind[i] == "source":
-				draw_circle(p, wd * 0.8, Color(_mask_col(s.node_mask[i]), al))
-	var gy := reveal_ground
-	# 花的茎、树干和树枝（在花叶后面）
-	for it in goals["flower"]:
-		var fp: Vector2 = it["p"]
-		draw_line(fp, Vector2(fp.x, gy), Color(C_GRASS_DARK, q), maxf(2.0, 16.0 * sc * q), true)
-	var leaves: Array = goals["leaf"]
-	if leaves.size() > 0 and q > 0.0:
-		var cx := 0.0
-		var ay := 0.0
-		for it in leaves:
-			cx += (it["p"] as Vector2).x
-			ay += (it["p"] as Vector2).y
-		cx /= float(leaves.size())
-		ay /= float(leaves.size())
-		var top := Vector2(cx, lerpf(ay, gy, 0.3))
-		var brown := Color(0.45, 0.30, 0.18, q)
-		draw_line(Vector2(cx, gy), top, brown, maxf(4.0, 60.0 * sc * q), true)
-		for it in leaves:
-			draw_line(top, it["p"], brown, maxf(2.0, 24.0 * sc * q), true)
-	# 花草树本体
-	var base_sz := maxf(14.0, 70.0 * sc)
-	var big := base_sz * (1.0 + 1.4 * q)
-	for kind in ["grass", "flower", "leaf"]:
-		for it in goals[kind]:
-			var c: Color = it["c"]
-			_draw_flora(kind, it["p"], big, c, it["g"])
+	pass
