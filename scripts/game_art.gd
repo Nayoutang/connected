@@ -4,6 +4,8 @@ extends RefCounted
 ## 这里负责管壳（Kenney 管道贴图，沿折线重复）、节点图标和终点的花草树外框。
 
 const PIPE_DRY = preload("res://assets/kenney/pipeGrey_26.png")
+const PIPE_WET = preload("res://assets/kenney/pipeGrey_32.png")
+const DROP = preload("res://assets/icons/water-drop.svg")
 const VALVE = preload("res://assets/icons/valve.svg")
 const TANK = preload("res://assets/icons/water-tank.svg")
 const SOURCE = preload("res://assets/icons/water-fountain.svg")

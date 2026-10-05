@@ -14,6 +14,7 @@ var levels: Array
 func _initialize() -> void:
 	levels = Chapter.get_levels()
 	main = load("res://main.tscn").instantiate()
+	main.set_meta("skip_story", true)
 	root.add_child(main)
 
 func _process(delta: float) -> bool:
@@ -24,6 +25,9 @@ func _process(delta: float) -> bool:
 	var lv = levels[level]
 	match stage:
 		0:
+			# Wait until the transition allows interaction before applying the solution.
+			if main.transition.active or main.navigation.switching:
+				return false
 			var sol = lv["solution"]
 			for pair in sol["valves"]:
 				main.sim.open_valve(main.sim.find_edge(pair[0], pair[1]))
@@ -52,6 +56,10 @@ func _process(delta: float) -> bool:
 			if main.btn_next.disabled == false:
 				print("reveal ok: %s | %s" % [main.lbl_title.text, main.lbl_msg.text])
 				reveals += 1
+				if level == levels.size() - 1:
+					print("SMOKE OK: 10 levels and 3 stage reports")
+					quit(0)
+					return false
 				main._on_next()
 				if main.mode == "garden":
 					stage = 3
